@@ -1,5 +1,6 @@
 import re
 import os
+import streamlit as st
 
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
@@ -10,10 +11,24 @@ from db import execute_sql
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
+def get_api_key():
+    try:
+        return st.secrets["OPENROUTER_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        return os.getenv("OPENROUTER_API_KEY")
+
+
+def get_model():
+    try:
+        return st.secrets["OPENROUTER_MODEL"]
+    except (KeyError, FileNotFoundError):
+        return os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
+
+
 def get_llm():
     return ChatOpenAI(
-        model=os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo"),
-        openai_api_key=os.getenv("OPENROUTER_API_KEY"),
+        model=get_model(),
+        openai_api_key=get_api_key(),
         openai_api_base=OPENROUTER_BASE_URL,
         temperature=0,
     )

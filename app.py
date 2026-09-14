@@ -1,10 +1,19 @@
 import streamlit as st
+import os
 from dotenv import load_dotenv
 
 from db import init_db
 from chains import run_question
 
 load_dotenv()
+
+# For Streamlit Cloud: read from secrets if .env not present
+if not os.getenv("OPENROUTER_API_KEY"):
+    try:
+        os.environ["OPENROUTER_API_KEY"] = st.secrets["OPENROUTER_API_KEY"]
+        os.environ["OPENROUTER_MODEL"] = st.secrets.get("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
+    except (KeyError, FileNotFoundError):
+        pass
 
 # Initialize database
 init_db()
