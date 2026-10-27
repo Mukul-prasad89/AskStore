@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 from db import init_db
-from chains import run_question
+from chains import run_question, get_model
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ st.set_page_config(page_title="Store Sales AI", page_icon="🛍️", layout="cen
 
 # Title
 st.title("🛍️ Store Sales AI")
-st.caption("Ask questions about your store using natural language.")
+st.caption(f"Ask questions about your store using natural language • Router: `{get_model()}`")
 
 # Session state for history
 if "history" not in st.session_state:

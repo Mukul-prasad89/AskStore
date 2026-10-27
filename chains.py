@@ -19,13 +19,18 @@ def get_api_key():
 
 
 def get_model():
+    model = None
     try:
         model = st.secrets.get("OPENROUTER_MODEL")
-        if model:
-            return model
     except (KeyError, FileNotFoundError):
         pass
-    return os.getenv("OPENROUTER_MODEL") or "openrouter/auto"
+    if not model:
+        model = os.getenv("OPENROUTER_MODEL")
+
+    # If no model is set or an old deprecated model was configured, default to openrouter/auto
+    if not model or "gpt-3.5" in model or "gpt-4.5" in model:
+        return "openrouter/auto"
+    return model
 
 
 def get_llm():
