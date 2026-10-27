@@ -11,7 +11,7 @@ load_dotenv()
 if not os.getenv("OPENROUTER_API_KEY"):
     try:
         os.environ["OPENROUTER_API_KEY"] = st.secrets["OPENROUTER_API_KEY"]
-        os.environ["OPENROUTER_MODEL"] = st.secrets.get("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
+        os.environ["OPENROUTER_MODEL"] = st.secrets.get("OPENROUTER_MODEL", "openrouter/auto")
     except (KeyError, FileNotFoundError):
         pass
 

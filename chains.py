@@ -20,9 +20,12 @@ def get_api_key():
 
 def get_model():
     try:
-        return st.secrets["OPENROUTER_MODEL"]
+        model = st.secrets.get("OPENROUTER_MODEL")
+        if model:
+            return model
     except (KeyError, FileNotFoundError):
-        return os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
+        pass
+    return os.getenv("OPENROUTER_MODEL") or "openrouter/auto"
 
 
 def get_llm():
