@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 
-from db import init_db
+from db import init_db, execute_sql
 from chains import run_question, get_model
 
 load_dotenv()
@@ -64,6 +64,14 @@ if st.button("Ask AI", type="primary", use_container_width=True) and question.st
     with st.spinner("Thinking..."):
         result = run_question(question.strip())
 
+    # Capture rows for buy flow
+    rows = []
+    if result.get("sql"):
+        try:
+            _, rows, _ = execute_sql(result["sql"])
+        except Exception:
+            rows = []
+
     # Store in history
     st.session_state.history.insert(0, {
         "question": question.strip(),
@@ -71,7 +79,12 @@ if st.button("Ask AI", type="primary", use_container_width=True) and question.st
         "sql": result["sql"],
         "result": result["result"],
         "error": result["error"],
+        "rows": rows,
     })
+
+    st.session_state["last_sql"] = result["sql"]
+    st.session_state["last_rows"] = rows
+    st.session_state["show_buy"] = False
 
 # Display results
 if st.session_state.history:
@@ -94,6 +107,60 @@ if st.session_state.history:
             st.text(latest["result"])
         else:
             st.info("No results returned.")
+
+    # Buy flow
+    last_rows = st.session_state.get("last_rows", latest.get("rows", []))
+    last_sql = st.session_state.get("last_sql", latest.get("sql", ""))
+    if last_rows:
+        if st.button("Buy", key="buy_btn", type="primary"):
+            st.session_state["show_buy"] = True
+
+        if st.session_state.get("show_buy"):
+            if len(last_rows) > 1:
+                idx = st.selectbox(
+                    "Select product",
+                    range(len(last_rows)),
+                    format_func=lambda i: ", ".join(f"{k}={v}" for k, v in last_rows[i].items()),
+                    key="buy_select",
+                )
+            else:
+                idx = 0
+
+            qty = st.number_input("Number of items", min_value=1, value=1, key="buy_qty")
+
+            if st.button("Pay", key="pay_btn", type="primary"):
+                # Final check against database
+                try:
+                    _, fresh_rows, _ = execute_sql(last_sql)
+                except Exception as e:
+                    st.error(f"Payment failed: could not verify stock ({e})")
+                    fresh_rows = []
+
+                def _stock(row):
+                    for k, v in row.items():
+                        kl = k.lower()
+                        if any(w in kl for w in ("quant", "stock", "avail")):
+                            try:
+                                return int(v)
+                            except (TypeError, ValueError):
+                                try:
+                                    return float(v)
+                                except (TypeError, ValueError):
+                                    pass
+                    for v in row.values():
+                        if isinstance(v, (int, float)) and not isinstance(v, bool):
+                            return v
+                    return None
+
+                if idx < len(fresh_rows):
+                    stock = _stock(fresh_rows[idx])
+                    if stock is not None and stock >= qty:
+                        st.success("Payment successful! Your order has been confirmed.")
+                        st.session_state["show_buy"] = False
+                    else:
+                        st.error("Payment failed: product not available in the requested quantity.")
+                else:
+                    st.error("Payment failed: product not found.")
 
 # Conversation history
 if len(st.session_state.history) > 1:
